@@ -1,0 +1,74 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: cli/package-lock.json
+
+      - name: Install ShellCheck
+        run: sudo apt-get update && sudo apt-get install -y shellcheck
+
+      - name: Bash syntax check
+        run: bash -n scripts/install.sh
+
+      - name: ShellCheck lint
+        run: shellcheck -x -s bash scripts/install.sh
+
+      - name: CLI — Install
+        working-directory: cli
+        run: npm ci
+
+      - name: CLI — Type check
+        working-directory: cli
+        run: npx tsc --noEmit
+
+      - name: CLI — Unit tests
+        working-directory: cli
+        run: npx vitest run
+
+      - name: YAML validation
+        run: |
+          python3 -c "
+          import yaml, sys, glob
+          for f in glob.glob('openshell/**/*.yaml', recursive=True):
+              try:
+                  yaml.safe_load(open(f))
+              except yaml.YAMLError as e:
+                  print(f'ERR {f}: {e}')
+                  sys.exit(1)
+          print('All YAML files valid')
+          "
+
+  docker-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build (no push)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: false
+          tags: hermesshell:ci-test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

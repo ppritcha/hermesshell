@@ -1,0 +1,84 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# HermesShell — Default Baseline Policy
+# ─────────────────────────────────────────────────────────────────────────────
+# This is the baseline policy applied beneath every tier (restricted, balanced,
+# open). It controls filesystem, process, and inference rules; network presets
+# from openshell/presets/ are layered on top via tiers.yaml.
+#
+#   INFERENCE ONLY (no presets) — the hermes binary may talk to inference.local
+#   only. No messaging gateways, no web access, no GitHub, no HuggingFace.
+#   Equivalent to the `restricted` tier with zero presets active.
+#
+# Use this policy when:
+#   - Running HermesShell for the first time (safe default).
+#   - You only need LLM inference and local tools (filesystem, bash, etc).
+#   - You want the tightest possible egress surface.
+#
+# WARNING: Schema matches NVIDIA/NemoClaw v0.1.0 reference blueprint. Do not
+# change field names without verifying against
+# `~/.nemoclaw/source/nemoclaw-blueprint/policies/openclaw-sandbox.yaml`.
+# HermesShell v0.3.0 shipped an invented schema (access_level, landlock.enabled,
+# protocol: https, rest: blocks) that OpenShell rejects. This file uses the
+# real schema.
+#
+# Apply with:
+#   openshell policy set hermesshell-1 --policy openshell/hermesshell-policy.yaml --wait
+# ─────────────────────────────────────────────────────────────────────────────
+
+version: 1
+
+filesystem_policy:
+  include_workdir: true
+  read_only:
+    - /usr
+    - /lib
+    - /lib64
+    - /bin
+    - /etc/ssl
+    - /etc/openshell-tls     # OpenShell proxy CA cert (for TLS interception)
+    - /etc/resolv.conf
+    - /etc/passwd
+    - /etc/group
+    - /opt/hermes            # Hermes installation (sandbox user reads, not writes)
+    - /opt/nvm               # nvm / Node.js (for Node.js-based MCP servers)
+    - /opt/mcp-atlassian     # mcp-atlassian venv (skipped if absent)
+    - /dev/urandom           # Python secrets, random, uuid, hashlib
+    - /sandbox/knowledge     # user knowledge docs (mounted ro)
+    - /sandbox/configs       # persona + hermes config (mounted ro)
+  read_write:
+    - /opt/data              # Hermes memories, skills, auth
+    - /sandbox               # agent working directory
+    - /tmp
+    - /dev/null              # required by Python subprocess, nvm, shell redirections
+
+landlock:
+  compatibility: best_effort
+
+process:
+  run_as_user: sandbox
+  run_as_group: sandbox
+
+network_policies:
+  # ── OpenShell inference router ─────────────────────────────────────────
+  # `inference.local` is the NVIDIA OpenShell in-cluster inference endpoint.
+  # Both 443 (TLS) and 80 (plaintext) are allowed because the router may be
+  # exposed on either depending on the OpenShell deployment topology.
+  inference_local:
+    name: inference_local
+    endpoints:
+      - host: inference.local
+        port: 443
+        protocol: rest
+        enforcement: enforce
+        tls: terminate
+        rules:
+          - allow: { method: "*", path: "/**" }
+      - host: inference.local
+        port: 80
+        protocol: rest
+        enforcement: enforce
+        tls: terminate
+        rules:
+          - allow: { method: "*", path: "/**" }
+    binaries:
+      - { path: /opt/hermes/.venv/bin/python3 }
