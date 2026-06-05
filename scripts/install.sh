@@ -2,7 +2,7 @@
 # HermesShell — one-command install + onboard.
 #
 # Usage:
-#   curl -fsSL https://raw.githubusercontent.com/TheAiSingularity/hermesshell/main/scripts/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/ppritcha/hermesshell/main/scripts/install.sh | bash
 #
 # What it does:
 #   1. Verifies bash, curl, docker, git are present and the Docker daemon is running.
@@ -12,16 +12,21 @@
 #   5. Runs `hermesshell onboard` to configure inference, policy, and create the sandbox.
 #
 # Overrides (env vars):
-#   HERMESSHELL_HOME         — install location (default: ~/.hermesshell)
-#   HERMESSHELL_REF          — git ref to check out (default: main)
-#   HERMESSHELL_PROVIDER     — skip provider prompt (non-interactive onboard)
-#   HERMESSHELL_MODEL        — skip model prompt (non-interactive onboard)
-#   HERMESSHELL_POLICY_TIER  — skip tier prompt (non-interactive onboard)
-#   HERMESSHELL_SKIP_ONBOARD — set to 1 to install without running onboard
+#   HERMESSHELL_HOME                — install location (default: ~/.hermesshell)
+#   HERMESSHELL_REF                 — git ref to check out (default: main)
+#   HERMESSHELL_PROVIDER            — skip provider prompt (non-interactive onboard)
+#   HERMESSHELL_MODEL               — skip model prompt (non-interactive onboard)
+#   HERMESSHELL_POLICY_TIER         — skip tier prompt (non-interactive onboard)
+#   HERMESSHELL_SKIP_ONBOARD        — set to 1 to install without running onboard
+#
+# Forwarded to the sandbox (override upstream Hermes defaults):
+#   HERMES_KANBAN_CLAIM_TTL_SECONDS — kanban worker heartbeat TTL (default 900s)
+#   HERMES_API_TIMEOUT              — Hermes API call timeout (default 1800s)
+#   HERMES_API_CALL_STALE_TIMEOUT   — Hermes stale-call timeout (default 900s)
 
 set -euo pipefail
 
-REPO_URL="${HERMESSHELL_REPO_URL:-https://github.com/TheAiSingularity/hermesshell.git}"
+REPO_URL="${HERMESSHELL_REPO_URL:-https://github.com/ppritcha/hermesshell.git}"
 REF="${HERMESSHELL_REF:-main}"
 INSTALL_DIR="${HERMESSHELL_HOME:-$HOME/.hermesshell}"
 NODE_MIN_VERSION=20

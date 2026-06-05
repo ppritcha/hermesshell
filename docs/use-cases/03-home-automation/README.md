@@ -58,7 +58,7 @@ Home Assistant (your local HA instance)
 ### Step 1 — Clone and configure
 
 ```bash
-git clone https://github.com/TheAiSingularity/hermesshell
+git clone https://github.com/ppritcha/hermesshell
 cd hermesshell
 cp .env.example .env
 ```

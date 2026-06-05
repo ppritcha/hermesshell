@@ -6,7 +6,7 @@ compatibility: [macOS, Linux, Windows]
 user-invocable: true
 metadata:
   version: 0.1.0
-  author: TheAiSingularity
+  author: ppritcha
   tags: [support, slack, customer-service, knowledge-base, escalation]
   requires_tools: [file, memory]
   required_environment_variables:

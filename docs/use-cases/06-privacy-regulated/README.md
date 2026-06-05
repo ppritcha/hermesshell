@@ -65,7 +65,7 @@ colima start --memory 16 --cpu 4
 ### Step 2 — Clone and build the image
 
 ```bash
-git clone https://github.com/TheAiSingularity/hermesshell
+git clone https://github.com/ppritcha/hermesshell
 cd hermesshell
 cp .env.example .env
 ```

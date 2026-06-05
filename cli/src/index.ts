@@ -15,15 +15,14 @@ import { snapshotCommand } from "./commands/snapshot.js";
 import { rebuildCommand } from "./commands/rebuild.js";
 import { chatCommand } from "./commands/chat.js";
 import { resolveDefaultSandbox } from "./lib/registry.js";
-
-const VERSION = "0.0.50";
+import { HERMESSHELL_VERSION } from "./lib/constants.js";
 
 const program = new Command();
 
 program
   .name("hermesshell")
   .description("HermesShell — Hermes Agent in NVIDIA OpenShell")
-  .version(VERSION);
+  .version(HERMESSHELL_VERSION);
 
 program
   .command("onboard")

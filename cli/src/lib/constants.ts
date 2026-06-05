@@ -21,7 +21,7 @@ export const CREDENTIALS_FILE = getCredentialsFile();
 export const MIN_OPENSHELL_VERSION = "0.0.30";
 export const MAX_OPENSHELL_VERSION = "2.0.0";
 
-export const HERMESSHELL_VERSION = "1.0.0";
+export const HERMESSHELL_VERSION = "1.0.1";
 
 export const DEFAULT_GATEWAY_PORT = 8080;
 export const DEFAULT_DASHBOARD_PORT = 18789;

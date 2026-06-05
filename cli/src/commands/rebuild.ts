@@ -51,6 +51,27 @@ export async function rebuildCommand(name: string, opts: RebuildOptions): Promis
     process.exit(1);
   }
 
+  // Propagate provider/model/tier from the stashed registry entry so the
+  // non-interactive `onboardCommand` call below has what it needs. Without
+  // these, onboard falls through to `process.env.HERMESSHELL_PROVIDER`
+  // (onboard.ts:217), finds it unset, and bails with "HERMESSHELL_PROVIDER
+  // is required in non-interactive mode" — leaving the sandbox destroyed
+  // and the user stuck running rebuild with `HERMESSHELL_PROVIDER=... \
+  // HERMESSHELL_MODEL=...` hand-set from the registry. The entry already
+  // has these values; the bug was just that nothing plumbed them through.
+  //
+  // Existing environment vars (e.g. set by the user) take precedence so
+  // they can still override the registry on a one-off basis.
+  if (entry.provider && !process.env.HERMESSHELL_PROVIDER) {
+    process.env.HERMESSHELL_PROVIDER = entry.provider;
+  }
+  if (entry.model && !process.env.HERMESSHELL_MODEL) {
+    process.env.HERMESSHELL_MODEL = entry.model;
+  }
+  if (entry.tier && !process.env.HERMESSHELL_POLICY_TIER) {
+    process.env.HERMESSHELL_POLICY_TIER = entry.tier;
+  }
+
   console.log(chalk.bold(`Rebuilding sandbox: ${name}`));
   console.log(chalk.dim("  This will: snapshot → destroy → recreate → restore"));
   console.log("");

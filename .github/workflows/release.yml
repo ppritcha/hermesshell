@@ -1,7 +1,7 @@
 name: Release
 
 # Build and publish the hermesshell image to GitHub Container Registry
-# (ghcr.io/theaisingularity/hermesshell) on semver tag pushes.
+# (ghcr.io/ppritcha/hermesshell) on semver tag pushes.
 #
 # Tags pushed:
 #   v<version>  — the exact release tag (e.g. v0.3.4)
@@ -48,7 +48,7 @@ jobs:
         id: tags
         run: |
           # GHCR requires lowercase repository names; github.repository_owner
-          # can contain mixed case (e.g. TheAiSingularity). Normalise once.
+          # can contain mixed case (e.g. PPritcha). Normalise once.
           OWNER_LC=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
           IMAGE="ghcr.io/${OWNER_LC}/hermesshell"
           echo "image=${IMAGE}" >> "$GITHUB_OUTPUT"
@@ -102,7 +102,7 @@ jobs:
             org.opencontainers.image.revision=${{ github.sha }}
             org.opencontainers.image.licenses=MIT
             org.opencontainers.image.description=Hermes Agent inside NVIDIA OpenShell sandbox. Kernel-enforced security.
-            com.theaisingularity.hermes-version=${{ steps.hermes.outputs.version }}
+            com.ppritcha.hermes-version=${{ steps.hermes.outputs.version }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |

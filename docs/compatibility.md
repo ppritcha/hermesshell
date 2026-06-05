@@ -10,8 +10,8 @@ HermesShell sits on top of several moving targets — Hermes Agent (upstream rel
 
 | Component | Tested version | Pinned in | Notes |
 |---|---|---|---|
-| **Hermes Agent** | `v2026.4.23` | [Dockerfile](../Dockerfile) `ARG HERMES_VERSION` | Base image tag in Dockerfile. Override with `docker build --build-arg HERMES_VERSION=vYYYY.M.D`. |
-| **NVIDIA OpenShell** | `0.0.34` (reported working by [@ppritcha](https://github.com/ppritcha) on DGX Spark with HermesShell v0.3.2) | Not installed by HermesShell — user installs on host. Version checked by `hermesshell doctor`. | Policy YAMLs parse against the v1 schema; `openshell sandbox connect` is used by `hermesshell connect` and does NOT accept `-- COMMAND` (see [#1](https://github.com/TheAiSingularity/hermesshell/issues/1)). |
+| **Hermes Agent** | `v2026.5.29.2` | [Dockerfile](../Dockerfile) `ARG HERMES_VERSION` | Base image tag in Dockerfile. Override with `docker build --build-arg HERMES_VERSION=vYYYY.M.D`. |
+| **NVIDIA OpenShell** | `0.0.34` (reported working by [@ppritcha](https://github.com/ppritcha) on DGX Spark with HermesShell v0.3.2) | Not installed by HermesShell — user installs on host. Version checked by `hermesshell doctor`. | Policy YAMLs parse against the v1 schema; `openshell sandbox connect` is used by `hermesshell connect` and does NOT accept `-- COMMAND` (see [#1](https://github.com/ppritcha/hermesshell/issues/1)). |
 | **NemoClaw blueprint** | `v0.1.0` reference (`~/.nemoclaw/source/nemoclaw-blueprint/policies/openclaw-sandbox.yaml`) | Inline citation comments in [`openshell/*.yaml`](../openshell/) | Our policies derive directly from this. One intentional divergence: `binaries: /usr/local/bin/hermes` instead of the blueprint's `/usr/local/bin/node` (Hermes is Python, OpenClaw is Node.js). |
 | **llama.cpp** | Any version that speaks the OpenAI-compatible chat-completions API on `/v1/chat/completions` | Not pinned — user installs via `brew install llama.cpp` or builds from source | Backward-compatible API for the last several major versions. |
 | **Debian base image** | `bookworm-slim` (floating) | [Dockerfile](../Dockerfile) line 1 | Floating tag accepted — security patches welcome. |
@@ -25,8 +25,8 @@ HermesShell sits on top of several moving targets — Hermes Agent (upstream rel
 
 | HermesShell | Host | Hermes | OpenShell | Reporter | Outcome |
 |---|---|---|---|---|---|
-| v0.3.2 | DGX Spark, Ubuntu | main (at time of test) | 0.0.34 | [@ppritcha](https://github.com/ppritcha) | Filed [#1](https://github.com/TheAiSingularity/hermesshell/issues/1), [#2](https://github.com/TheAiSingularity/hermesshell/issues/2), [#3](https://github.com/TheAiSingularity/hermesshell/issues/3); all fixed in v0.3.2 |
-| v0.3.2 | macOS 14 (Apple Silicon) | v2026.4.23 (via Docker pin) | N/A (Docker fallback) | Maintainer | `hermesshell chat` + `doctor` pass; kernel-enforcement N/A |
+| v0.3.2 | DGX Spark, Ubuntu | main (at time of test) | 0.0.34 | [@ppritcha](https://github.com/ppritcha) | Filed [#1](https://github.com/ppritcha/hermesshell/issues/1), [#2](https://github.com/ppritcha/hermesshell/issues/2), [#3](https://github.com/ppritcha/hermesshell/issues/3); all fixed in v0.3.2 |
+| v0.3.2 | macOS 14 (Apple Silicon) | v2026.5.29.2 (via Docker pin) | N/A (Docker fallback) | Maintainer | `hermesshell chat` + `doctor` pass; kernel-enforcement N/A |
 
 If you test HermesShell on a fresh platform/version combo, please open a PR adding a row here — or run `hermesshell doctor` and paste the output into a GitHub issue with the label `field-report`.
 
@@ -57,3 +57,43 @@ If HermesShell fails in a known-working combination (or a new one), please inclu
 6. Policy preset in use (`hermesshell status` shows it)
 
 The bug report template at [.github/ISSUE_TEMPLATE/bug_report.md](../.github/ISSUE_TEMPLATE/bug_report.md) has fields for all of these.
+
+---
+
+## Operator-tunable upstream env vars
+
+HermesShell does not bake site-specific defaults into the public image for these upstream-supported tunables. The upstream Hermes Agent default applies unless an operator sets the env var.
+
+| Env var | Upstream default | Set when |
+|---|---|---|
+| `HERMES_KANBAN_CLAIM_TTL_SECONDS` | `900` (15 minutes) | Your inference backend can take longer than 15 minutes per call. The kanban dispatcher SIGTERMs the worker if no heartbeat fires within the TTL; raise it to e.g. `14400` (4 hours) for slow models. Resolved at runtime by `_resolve_claim_ttl_seconds()` in `/opt/hermes/hermes_cli/kanban_db.py` (added in upstream v0.15.0). |
+| `HERMES_API_TIMEOUT` | `1800` (30 minutes) | Override the Hermes API request timeout for slow upstreams. |
+| `HERMES_API_CALL_STALE_TIMEOUT` | `900` (15 minutes) | Override the stale-call timeout used to detect hung in-flight inference requests. |
+
+### How to set them
+
+**Recommended: export in your shell before running `hermesshell onboard` or `hermesshell rebuild`.** HermesShell forwards these three env vars from your host environment into the sandbox automatically:
+
+```bash
+export HERMES_KANBAN_CLAIM_TTL_SECONDS=14400
+export HERMES_API_TIMEOUT=3600
+hermesshell onboard
+```
+
+`hermesshell rebuild` inherits the same forwarding because it calls onboard internally. To make the override persistent across sessions, add the export lines to your shell rc file.
+
+**Manual fallback (advanced):** for sandboxes created outside the wizard, pass `-- env KEY=VALUE` directly to OpenShell:
+
+```bash
+openshell sandbox create \
+  --name hermesshell-1 \
+  --from Dockerfile \
+  --policy openshell/hermesshell-policy.yaml \
+  -- env HERMES_KANBAN_CLAIM_TTL_SECONDS=14400 /bin/true
+```
+
+**Docker-only fallback (no OpenShell):** use the standard `-e` flag:
+
+```bash
+docker run -e HERMES_KANBAN_CLAIM_TTL_SECONDS=14400 ghcr.io/ppritcha/hermesshell:latest
+```

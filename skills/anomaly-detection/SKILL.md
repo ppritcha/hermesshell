@@ -6,7 +6,7 @@ compatibility: [macOS, Linux]
 user-invocable: true
 metadata:
   version: 0.1.0
-  author: TheAiSingularity
+  author: ppritcha
   tags: [data-analysis, postgres, anomaly, monitoring, cron, slack, telegram]
   requires_tools: [memory, cron]
   required_environment_variables:

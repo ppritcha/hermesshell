@@ -1,8 +1,8 @@
 # HermesShell + OpenShell: based on official Hermes Agent image
 # hermes binary: /opt/hermes/.venv/bin/hermes (accessible to all users)
 # hermes data:   /opt/data/ (config, skills, memories)
-FROM nousresearch/hermes-agent:v2026.5.7 AS base
-ARG HERMES_VERSION="v2026.5.7"
+FROM nousresearch/hermes-agent:v2026.5.29.2 AS base
+ARG HERMES_VERSION="v2026.5.29.2"
 
 ARG HERMESSHELL_MODEL=""
 ARG HERMESSHELL_INFERENCE_BASE_URL="https://inference.local/v1"
@@ -14,7 +14,7 @@ USER root
 # OpenShell requires a 'sandbox' user/group; iproute2 for network namespace
 # setup; curl for the nvm installer.
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends iproute2 curl ca-certificates python3-venv php-cli universal-ctags global python3-pygments && \
+    apt-get install -y --no-install-recommends iproute2 curl ca-certificates python3-venv php-cli php-curl php-gd php-mbstring php-xml php-zip composer universal-ctags global python3-pygments && \
     rm -rf /var/lib/apt/lists/* && \
     groupadd -r sandbox && useradd -r -g sandbox -m -d /sandbox -s /bin/bash sandbox && \
     usermod -aG hermes sandbox 2>/dev/null || true && \
@@ -58,42 +58,14 @@ RUN python3 -m venv /opt/mcp-atlassian && \
     /opt/mcp-atlassian/bin/pip install --no-cache-dir mcp-atlassian && \
     chmod -R a+rX /opt/mcp-atlassian
 
-# Fix TUI build script mismatch. v0.13.0 package.json uses --outdir=dist
-# (producing entry-exports.js) but _hermes_ink_bundle_stale() in main.py
-# expects dist/ink-bundle.js. Patch the build script to use --outfile so
-# the output matches what the staleness check looks for. Without this,
-# hermes always triggers a rebuild which fails under OpenShell's Landlock
-# read_only policy on /opt/hermes.
-RUN if [ -f /opt/hermes/ui-tui/packages/hermes-ink/package.json ]; then \
-        sed -i 's/--outdir=dist/--outfile=dist\/ink-bundle.js/' \
-            /opt/hermes/ui-tui/packages/hermes-ink/package.json; \
-    fi
-
-# Pre-install TUI (React/Ink) dependencies. hermes --tui runs npm install
-# at first launch, but /opt/hermes is read-only in the sandbox so it fails.
-# v0.13.0 uses a workspace layout: packages/hermes-ink is a local file: dep
-# that must be built first, then linked into node_modules, then the main TUI
-# build runs. Without this, runtime `hermes --tui` fails with EPERM on dist/.
-RUN if [ -f /opt/hermes/ui-tui/package.json ]; then \
-        . "$NVM_DIR/nvm.sh" && \
-        cd /opt/hermes/ui-tui && \
-        npm install --no-audit --no-fund && \
-        npm run build --prefix packages/hermes-ink && \
-        rm -rf node_modules/@hermes/ink && \
-        npm install --no-audit --no-fund && \
-        npm run build; \
-    fi
-
-# Bump the kanban worker heartbeat TTL from 15 minutes to 4 hours.
-# Hermes hard-codes DEFAULT_CLAIM_TTL_SECONDS = 15 * 60 in
-# /opt/hermes/hermes_cli/kanban_db.py with no env/YAML override. The agent
-# cannot call kanban_heartbeat while blocked on a slow LLM inference call,
-# so a single API call longer than the TTL triggers a SIGTERM reclaim by
-# the dispatcher. The trailing grep makes the build fail loudly if a future
-# upstream version renames or reformats the constant.
-RUN sed -i 's/^DEFAULT_CLAIM_TTL_SECONDS = 15 \* 60$/DEFAULT_CLAIM_TTL_SECONDS = 4 * 60 * 60/' \
-        /opt/hermes/hermes_cli/kanban_db.py && \
-    grep -q '^DEFAULT_CLAIM_TTL_SECONDS = 4 \* 60 \* 60$' /opt/hermes/hermes_cli/kanban_db.py
+# Skip the hermes-ink TUI bundle staleness check by forcing Hermes onto its
+# prebuilt-bundle shortcut. _hermes_ink_bundle_stale() looks for
+# dist/ink-bundle.js, but the upstream build script outputs entry-exports.js,
+# so the check always returns stale and triggers a synchronous npm rebuild
+# at every TUI launch (which then fails under OpenShell's Landlock read_only
+# policy on /opt/hermes). Setting HERMES_TUI_DIR makes _make_tui_argv take
+# the shortcut that checks dist/entry.js instead, bypassing the loop.
+ENV HERMES_TUI_DIR="/opt/hermes/ui-tui"
 
 # Ensure the hermes installation is world-readable/executable so the
 # OpenShell sandbox user can run hermes from SSH sessions

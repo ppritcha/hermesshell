@@ -532,6 +532,26 @@ async function runOnboard(opts: OnboardOptions): Promise<void> {
 
     const hostTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
 
+    // Forward a small allowlist of upstream-tunable Hermes env vars from the
+    // host shell into the sandbox via `openshell sandbox create -- env`.
+    // Operators export these in their shell before running onboard/rebuild
+    // to override upstream defaults (e.g. raise the kanban heartbeat TTL for
+    // slow inference backends) without editing the Dockerfile or
+    // hermes-init.sh. See docs/compatibility.md.
+    const FORWARDED_HERMES_ENV_VARS = [
+      "HERMES_KANBAN_CLAIM_TTL_SECONDS",
+      "HERMES_API_TIMEOUT",
+      "HERMES_API_CALL_STALE_TIMEOUT",
+    ] as const;
+    const forwardedEnv: Record<string, string> = {};
+    for (const key of FORWARDED_HERMES_ENV_VARS) {
+      const val = process.env[key];
+      if (val) forwardedEnv[key] = val;
+    }
+    if (Object.keys(forwardedEnv).length > 0) {
+      console.log(chalk.dim(`  Forwarding to sandbox: ${Object.keys(forwardedEnv).join(", ")}`));
+    }
+
     const created = await createSandbox({
       name: sandboxName,
       policyFile: policyOutputPath,
@@ -546,6 +566,7 @@ async function runOnboard(opts: OnboardOptions): Promise<void> {
         HERMESSHELL_INFERENCE_API: apiPath,
         HERMESSHELL_TZ: hostTimezone,
       },
+      envArgs: Object.keys(forwardedEnv).length > 0 ? forwardedEnv : undefined,
     });
 
     if (!created) {

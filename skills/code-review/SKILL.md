@@ -6,7 +6,7 @@ compatibility: [macOS, Linux, Windows]
 user-invocable: true
 metadata:
   version: 0.1.0
-  author: TheAiSingularity
+  author: ppritcha
   tags: [development, code-review, security, debugging]
   requires_tools: [terminal, file, memory]
 ---

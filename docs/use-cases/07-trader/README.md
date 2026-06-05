@@ -48,7 +48,7 @@ For alert generation and market monitoring, even the CPU numbers are faster than
 ### Step 1 — Clone and configure
 
 ```bash
-git clone https://github.com/TheAiSingularity/hermesshell
+git clone https://github.com/ppritcha/hermesshell
 cd hermesshell
 cp .env.example .env
 ```

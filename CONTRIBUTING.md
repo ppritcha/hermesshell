@@ -76,7 +76,7 @@ If you work at NVIDIA or have access to OpenShell internals, correctness fixes t
 ### Clone and verify
 
 ```bash
-git clone https://github.com/TheAiSingularity/hermesshell
+git clone https://github.com/ppritcha/hermesshell
 cd hermesshell
 
 # Build and test the CLI
@@ -299,7 +299,7 @@ Include your `hermesshell doctor` output in the PR body.
 
 ## Questions?
 
-Open a [Discussion](https://github.com/TheAiSingularity/hermesshell/discussions) for anything that isn't a bug report or feature request. This is the right place for:
+Open a [Discussion](https://github.com/ppritcha/hermesshell/discussions) for anything that isn't a bug report or feature request. This is the right place for:
 - "Is this the right approach for X?"
 - "Has anyone gotten Y working?"
 - "What's the roadmap for Z?"

@@ -63,7 +63,7 @@ All Docker-mode guides share these baseline requirements:
 - **Git** to clone the repo
 
 ```bash
-git clone https://github.com/TheAiSingularity/hermesshell
+git clone https://github.com/ppritcha/hermesshell
 cd hermesshell
 cp .env.example .env
 # Drop your .gguf model into models/

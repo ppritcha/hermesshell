@@ -6,7 +6,7 @@
   <a href="https://github.com/ppritcha/hermesshell/actions/workflows/ci.yml"><img src="https://github.com/ppritcha/hermesshell/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="https://github.com/ppritcha/hermesshell/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License"></a>
   <a href="https://github.com/ppritcha/hermesshell/blob/main/CONTRIBUTING.md"><img src="https://img.shields.io/badge/contributions-welcome-brightgreen.svg" alt="Contributions welcome"></a>
-  <a href="https://github.com/ppritcha/hermesshell/blob/main/CHANGELOG.md"><img src="https://img.shields.io/badge/version-1.0.0-orange.svg" alt="Version"></a>
+  <a href="https://github.com/ppritcha/hermesshell/blob/main/CHANGELOG.md"><img src="https://img.shields.io/badge/version-1.0.1-orange.svg" alt="Version"></a>
 </p>
 
 **Hermes Agent (NousResearch) running inside NVIDIA OpenShell.**
@@ -39,9 +39,48 @@ OpenShell is NVIDIA's kernel-level sandbox for AI agents — it gates every outb
 
 ## Architecture
 
+The `hermesshell` CLI runs on the host and manages a fleet of isolated Hermes sandboxes — each with its own persona, credentials, persistent memory, skills, and policy tier. OpenShell wraps every sandbox with Landlock (filesystem), seccomp (syscalls), and an OPA + L7 proxy (network egress). Inside the sandbox, the agent talks to a single virtual endpoint, `inference.local`; OpenShell intercepts that call and routes it to whichever backend each sandbox was configured for. Hermes never knows it is sandboxed.
 
+```mermaid
+flowchart TB
+    User(["User input<br/>chat - messaging - API"]) --> CLI
 
-OpenShell intercepts every call to `inference.local` inside the sandbox and routes it to the configured backend. Hermes never knows it's sandboxed.
+    subgraph host [Host machine]
+        CLI["hermesshell CLI<br/>onboard - chat - policy - snapshot - destroy - ..."]
+        Reg[("~/.hermesshell/<br/>registry.json + credentials")]
+        CLI --- Reg
+    end
+
+    CLI --> sbA
+    CLI --> sbB
+    CLI --> sbC
+
+    subgraph sbA [mybot - tier balanced]
+        AgentA[Hermes Agent]
+        StateA[("MEMORY.md - USER.md - skills/")]
+        AgentA --- StateA
+    end
+
+    subgraph sbB [support - tier open]
+        AgentB[Hermes Agent]
+        StateB[("MEMORY.md - USER.md - skills/")]
+        AgentB --- StateB
+    end
+
+    subgraph sbC [privacy - tier restricted]
+        AgentC[Hermes Agent]
+        StateC[("MEMORY.md - USER.md - skills/")]
+        AgentC --- StateC
+    end
+
+    sbA -->|"inference.local"| Router
+    sbB -->|"inference.local"| Router
+    sbC -->|"inference.local"| Router
+
+    Router["Inference router<br/>(OpenShell, per-sandbox config)"]
+    Router --> Local["Local: llama.cpp - Ollama - vLLM"]
+    Router --> Cloud["Cloud: NVIDIA NIM - OpenAI - Anthropic - Gemini"]
+```
 
 ---
 

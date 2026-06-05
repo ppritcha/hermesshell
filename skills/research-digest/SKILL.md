@@ -6,7 +6,7 @@ compatibility: [macOS, Linux, Windows]
 user-invocable: true
 metadata:
   version: 0.1.0
-  author: TheAiSingularity
+  author: ppritcha
   tags: [research, automation, telegram, cron, arxiv]
   requires_tools: [web_search, web_extract, memory, cron]
   required_environment_variables:
